@@ -1,0 +1,32 @@
+sync.WaitGroup的使用
+
+协程同步，有时可能会使用time.Sleep(time.Second * 10)这样的方法，但显然无法确定具体的时间，并不好
+
+有的可能会使用chan，比如
+func main() {
+    meta := make(chan bool, 100)
+    for i := 1; i < 100; i++ {
+        go func(i int) {
+            fmt.Println(i)
+            meta <- true
+        }
+    }
+    c := <- meta
+}
+这种方式可以完美解决上面的问题，但如果要开启的协程比较多，这样的内存开销就会比较大了
+
+sync.WaitGroup内部实现了一个计数器，并且有三个方法Add(n)将计数器设置为n, Done()计数器-1, Wait()阻塞代码执行，直到计数器值减为0
+这样，上面的代码可以写成
+func main() {
+    wg := sync.WaitGroup{}
+    wg.Add(100)
+    for i := 0; i < 100; i++ {
+        go func(i int) {
+            fmt.Println(i)
+            wg.Done()
+        }(i)
+    }
+    wg.Wait()
+}
+
+同时需要注意的是sync.WaitGroup不是引用类型
