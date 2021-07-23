@@ -1,0 +1,66 @@
+最近做的项目和网络关系比较大，当客户端每发来一个连接，就需要从conn里面读取数据，即conn.Read(buffer)，buffer类型为[]byte
+但问题来了，make的时候需要多大呢？可以设置的很小，等到读取数据的时候让切片自动增长吗？
+我做了一下相关的实验
+package main
+
+import (
+    "io"
+    "fmt"
+    "net"
+)
+
+func ReadFull(conn *net.Conn, buf []byte) (int, error) {
+    defer (*conn).Close()
+    len := 0
+    // fmt.Println("conn:", *conn)
+    for {
+        n, err := (*conn).Read(buf[len:])
+        if n > 0 {
+           len += n
+        }
+        fmt.Println("len:", len)
+        if err != nil {
+            if err != io.EOF && err != io.ErrClosedPipe {
+                return len, err
+            }
+            break
+        }
+    }
+    return len, nil
+}
+
+func main() {
+    defer func() {
+        if err := recover(); err != nil {
+            fmt.Println(err)
+        }
+    }()
+    proxyAddr := "127.0.0.1:12345"
+    listener, e := net.Listen("tcp", proxyAddr)
+    if e != nil {
+        fmt.Println("Proxy Listen Error :", e)
+    } else {
+        fmt.Println("服务器正在监听...")
+    }
+    for {
+        conn, e2 := listener.Accept()
+        if e2 != nil {
+            fmt.Println("Connect to Proxy Failed, ", e)
+        } else {
+            fmt.Println("服务器收到请求来自", conn.RemoteAddr())
+        }
+        fmt.Println("conn:", conn)
+        go func(con *net.Conn) {
+            // I/O operation from connection
+            buf := make([]byte, 4096, 4096)
+            n, e3 := ReadFull(con, buf)
+            if e3 != nil {
+                fmt.Println("Read From Conn Err", e3)
+            } else {
+                fmt.Println("message is ", n)
+            }
+        }(&conn)
+    }
+}
+主要更改的就是buf := make([]byte, 4096, 4096)这个地方，如果把第二个参数写成0的话就会发现ReadFull()函数会一直死循环，读不进去数据。
+但我们设置大小的时候设置多大呢？一般来说4096应该就够了，TCP的MTU大概为1500字节。
