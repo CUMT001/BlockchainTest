@@ -5,8 +5,7 @@ net.Conn是一个接口，其中声明了一个方法func (net.Conn) RemoteAddr(
 UDP网络也可以使用传统的net.Conn，但golang提供了另外的一套API
 可以使用func DialUDP(net string, laddr, raddr *UDPAddr) (*UDPConn, error)发起连接请求
 服务端使用func ListenUDP(net string, laddr *UDPAddr) (*UDPConn, error)接收
-但这里的net.UDPAddr类型并不能使用类型转换成net.Addr，因为它没有实现Network()方法，
-同样的也不能使用类型断言将net.Addr转成net.UDPAddr
+
 有时候需要获得UDP数据包的对端地址，golang也提供了RemoteAddr()，我一看，这不很好吗？拿来用
 结果报出了运行时错误
 
