@@ -1,0 +1,27 @@
+我们知道在普通的网络编程中可以使用conn.RemoteAddr()获取对端的IP地址和port
+net.Conn是一个接口，其中声明了一个方法func (net.Conn) RemoteAddr() Addr
+返回类型为Addr也是一个接口，包含两个方法Network()和String()
+
+UDP网络也可以使用传统的net.Conn，但golang提供了另外的一套API
+可以使用func DialUDP(net string, laddr, raddr *UDPAddr) (*UDPConn, error)发起连接请求
+服务端使用func ListenUDP(net string, laddr *UDPAddr) (*UDPConn, error)接收
+但这里的net.UDPAddr类型并不能使用类型转换成net.Addr，因为它没有实现Network()方法，
+同样的也不能使用类型断言将net.Addr转成net.UDPAddr
+有时候需要获得UDP数据包的对端地址，golang也提供了RemoteAddr()，我一看，这不很好吗？拿来用
+结果报出了运行时错误
+
+panic: runtime error: invalid memory address or nil pointer dereference
+[signal SIGSEGV: segmentation violation code=0x1 addr=0x20 pc=0x10e8331]
+
+goroutine 1 [running]:
+main.clientHandle(0xc000120018)
+	/Users/litianshu/Documents/test/CanUDPBlock.go:22 +0xf1
+main.main()
+	/Users/litianshu/Documents/test/CanUDPBlock.go:33 +0x133
+exit status 2
+
+这里怎么会是空指针呢？我都是使用的官方给的API啊。
+后来发现UDPAddr.RemoteAddr()返回的是一个空，自然不能对结果进行操作。
+要想根据UDPCoon获得对端的地址，需要使用func (c *UDPConn) ReadFrom(b []byte) (int, Addr, error)
+或者func (c *UDPConn) ReadFromUDP(b []byte) (n int, addr *UDPAddr, err error)
+获得Addr或者*UDPAddr类型的参数
