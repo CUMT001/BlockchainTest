@@ -1,0 +1,13 @@
+iperf3是一个网络测速工具，在Windows，macOS，Linux上都可以使用。
+安装使用apt即可
+$apt-get install iperf3
+首先熟悉一下使用选项
+-p, --port      需要连接的服务端口
+-f, --format    测试结果报告格式，Kbits, Mbits, KBytes, MBytes
+-i, --interval  带宽报告的时间间隔
+-V, --verbose   输出更多详细信息
+-J, --json      以json方式输出结果
+-u, --udp       使用udp而不是tcp
+-b, --bandwidth 设置目标带宽
+-l, --len       设置缓冲区长度
+-4/-6           仅使用ipv4/ipv6
