@@ -1,0 +1,55 @@
+最近在做修改TCP头部信息的内容，golang中提供的TCP编程API大多处于TCP层或者http相关的应用层，无法直接修改TCP的头部信息。我想到RemoteAddr()可以获得连接的对端地址信息，从这里突破查看底层实现可能可以找到如何修改头部的内容。
+
+下面以go v1.16.6的源码为例分析RemoteAddr()是如何获得远端地址的
+src/net/net.go line 227
+func RemoteAddr() Addr
+返回的是c.fd.raddr,c是调用者连接conn，也就是连接结构体中包含了远端地址的信息，下一步是找到创建连接的部分
+
+src/net/tcpsock.go line 257
+func Accept() (conn, err)
+服务器端接收客户端请求，返回一个连接和一个错误
+c, err := l.accpet() l是调用者，*TCPListener
+
+net包中有两个accept方法，声明相同
+src/net/tcp_sockplan9.go line 47
+func (ln *TCPListener) accept() (*TCPConn, error)
+返回的tc(*TCPConn)通过tc := newTCPConn(fd)获得
+fd则是通过fd, err := ln.fd.acceptPlan9()获得ln是*TCPListener
+-------
+TCPListener的定义在
+src/net/tcpsock.go line 225
+type TCPListener struct {
+        fd *netFD
+        lc ListenConfig
+}
+-------
+netFD的定义在
+src/net/fd_plan9.go line 16
+type netFD struct {
+        pfd poll.FD
+
+        // immutable until Close
+        net               string
+        n                 string
+        dir               string
+        listen, ctl, data *os.File
+        laddr, raddr      Addr
+        isStream          bool
+}
+
+ipsock_plan9.go line 255
+func (fd *netFD) acceptPlan9() (nfd *netFD, err error)
+return newFD(fd.net, name, listen, ctl, data, fd.laddr, raddr)调用newFD生成新的netFD交给连接TCPConn，我们需要知道参数中raddr是怎么获得的
+raddr是通过raddr, err := readPlan9Addr(fd.net, netdir+"/"+fd.net+"/"+name+"/remote")获得的
+
+src/net/ipsock_plan9.go line 71
+func readPlan9Addr(net, filename string) (addr Addr, err error)
+从文件名filename中读取数据并解析成ip+port的格式然后重组成TCPAddr或者UDPAddr
+
+文件名即位netdir/fd.net/name/remote，既然有这个文件是否有头部其他信息的文件呢？
+其中netdir定义在
+src/net/fd_paln9.go line 2
+var netdir = "/net" // default network
+这里的fd.net哪里来的呢？acceptPlan9的调用者正是fd，再往上追溯发现是TCPListener的属性fd，TCPListener是如何获得fd属性的（初始化）
+src/net/dial.go line 704
+return lc.Listen(context.Background(), network, address) lc是ListenConfig
