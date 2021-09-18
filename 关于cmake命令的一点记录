@@ -1,0 +1,25 @@
+绪论
+cmake是编译cpp的工具，gcc，g++能够编译，但随着项目的增大，编译愈加困难，cmake和makefile应运而出。cmake的应用非常复杂，想要了解方方面面不太可能，在阅读其他人写的CmakeLists.txt的过程中学习常用的cmake命令是可行之道。下面就对我遇到的常见命令做一下记录。
+
+cmake_minimum_required()
+e.g. cmake_minimum_required(VERSION 3.16) 表示cmake的最低版本要求为3.16
+如果需要指定最高版本可以使用
+cmake_minimum_required(VERSION 3.10...3.16) 表示cmake最低版本要求3.10，最高要求3.16
+
+project()
+e.g. project(obs-multi-rtmp VERSION 0.2.6.1) 表示该CMakeLists.txt所构建的项目名称为obs-multi-rtmp,项目版本为0.2.6.1
+除了项目名称外，project指令还可以指定cmake工程的版本号VERSION、简短的描述DESCRIPTION、主页URL HOMEPAGE_URL、编译工程所使用的语言LANGUAGES
+在project指定项目名称的同时，cmake会给下面的变量赋值PROJECT_NAME、PROJECT_SOURCE_DIR(当前工程的源码路径)、PROJECT_BINARY_DIR(当前工程的二进制路径)、CMAKE_PROJECT_NAME(顶层工程的名字)
+设置VERSION的同时也会设置下面的变量PROJECT_VERSION,PROJECT_VERSION_MAJOR,PROJECT_VERSION_MINOR,PROJECT_VERSION_PATCH,PROJECT_VERSION_TWEAK，比如4.0.1.6，即为MAJOR.MINOR.PATCH.TWEAK
+LANGUAGE支持的选项包括C/CXX/CUDA/OBJC/OBJCXX/Fortran/ASM，如果没有指定，默认为C和CXX，指定LANGUAGE的目的是检查CMAKE_XXX_COMPILER指定的编译器是否存在，以便工程能正确构建。
+
+set()
+set命令用于显式地定义变量
+e.g. set(QTDIR "${QTDIR}" CACHE PATH "Path to qt directory")其中QTDIR为缓存条目，${QTDIR}是缓存条目的值，，默认情况下缓存条目的值不会被覆盖。缓存条目的实质是可夸层级传递的变量，类似于全局变量。CACHE说明这里设置的是缓存条目。如果变量之前未定义或使用了FORCE选项，缓存条目会直接被赋值，cmake构建的过程中也可以使用-D选项给缓存条目赋值，这样CMakeLists.txt中的set只会为缓存条目增加类型。PATH为缓存条目类型，可选的类型包括BOOL布尔类型,FILEPATH文件路径,PATH目录路径,STRING文本行,INTERNAL文本行，只在内部使用不对外呈现。主要用于运行过程中存储变量
+set还能用来设置普通变量和环境变量set(var value)给定变量var的值为a，set(var value1 value2 value3)将变量var设置为多个给定的值，值之间使用;连接，set(var)设置变量为空，相当于unset，set定义普通变量时，使用了PARENT_SCOPE，则变量的访问作用域为调用定义变量的函数的函数，即函数a调用了函数b，函数b中定义了变量var并使用了PARENT_SCOPE，函数b中无法使用var，但a中国可以使用。如果在文件中使用PARENT_SCOPE定义，且定义的CMakeList是子文件夹的内容，则变量可以在上层文件夹的CMakeLists中使用。
+set(ENV var value)用于设置环境变量，该命令设置的环境变量只在当前的cmake生效，设置为空也不会清楚当前环境变量的值。
+
+list()
+e.g. list(APPEND CMAKE_PREFIX_PATH "${QTDIR}")
+list命令表示对列表的一系列操作，cmake中的列表变量是用;分隔的一组字符串，创建列表可以使用set命令。而对变量的操作可以分为读取、查找、修改、排序四个大类。
+b表示
